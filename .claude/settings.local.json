@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(node:*)",
+      "Bash(go version:*)",
+      "Bash(java:*)",
+      "Bash(winget:*)",
+      "Bash(scoop install:*)",
+      "Bash(powershell:*)",
+      "Bash(unzip:*)",
+      "Bash(/tmp/gradle-dist/gradle-8.11.1/bin/gradle wrapper:*)",
+      "Bash(ls:*)",
+      "Bash(./gradlew compileKotlin:*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew compileKotlin:*)",
+      "Bash(jobs:*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew run:*)",
+      "Bash(rm:*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew createDistributable:*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew packageMsi:*)",
+      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew generateIcon:*)"
+    ]
+  }
+}
