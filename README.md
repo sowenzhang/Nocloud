@@ -1,5 +1,7 @@
 # NoCloudChat 📡
 
+[![CI](https://github.com/NoCloudChat/NoCloudChat/actions/workflows/ci.yml/badge.svg)](https://github.com/NoCloudChat/NoCloudChat/actions/workflows/ci.yml)
+
 **Zero-registration, instant local-network chat.**
 Launch on any device on the same Wi-Fi or LAN — no sign-up, no server, no internet needed.
 
@@ -117,6 +119,16 @@ Creates platform-native installers:
 - macOS: `.dmg` in `build/compose/binaries/main/dmg/`
 - Linux: `.deb` in `build/compose/binaries/main/deb/`
 
+### Build Android APK
+
+Requires Android SDK. Set `sdk.dir` in `local.properties` first, then:
+
+```bash
+./gradlew assembleDebug
+```
+
+Output: `build/outputs/apk/debug/app-debug.apk`
+
 ---
 
 ## MVP Feature Status
@@ -130,8 +142,11 @@ Creates platform-native installers:
 | Message history (session) | ✅ Done |
 | Unread message badges + toasts | ✅ Done |
 | Dark theme (Compose Material3) | ✅ Done |
+| Light/dark mode toggle | ✅ Done |
+| Network passphrase (security) | ✅ Done |
+| File sharing | ✅ Done |
+| Android (APK) | ✅ Done (KMP) |
 | Native distribution packaging | ✅ Ready |
-| File sharing | 🔜 Phase 2 |
 | Voice messages | 🔜 Phase 2 |
 | Group chat | 🔜 Phase 3 |
 
@@ -144,8 +159,43 @@ Creates platform-native installers:
 | Windows 11 (JDK 21) | ✅ |
 | macOS 14 (JDK 21) | 🔜 |
 | Ubuntu 22.04 (JDK 21) | 🔜 |
+| Android (API 26+) | 🔜 Build ready |
 
 ---
 
-*Built 2026-03-02 / 03*
+## Project Structure (KMP)
+
+```
+NoCloudChat/
+├── build.gradle.kts             ← KMP build config
+├── settings.gradle.kts
+├── local.properties             ← sdk.dir for Android builds
+├── gradlew / gradlew.bat        ← Gradle wrapper
+├── src/
+│   ├── commonMain/kotlin/com/nocloudchat/
+│   │   ├── App.kt               ← Root @Composable (shared)
+│   │   ├── Platform.kt          ← expect declarations
+│   │   ├── Preferences.kt       ← Settings persistence
+│   │   ├── model/               ← Message, Peer data classes
+│   │   ├── network/             ← Discovery, Messenger, FileTransfer
+│   │   ├── state/AppState.kt    ← Reactive ViewModel (StateFlow)
+│   │   └── ui/                  ← All Compose screens and components
+│   ├── desktopMain/kotlin/com/nocloudchat/
+│   │   ├── Main.kt              ← Desktop application {} entry point
+│   │   ├── Platform.kt          ← Desktop actual implementations
+│   │   ├── network/DesktopSsid.kt ← SSID detection via OS CLI
+│   │   └── tools/GenerateIcon.kt
+│   └── androidMain/kotlin/com/nocloudchat/
+│       ├── MainActivity.kt      ← Android ComponentActivity
+│       ├── Platform.kt          ← Android actual implementations
+│       └── AndroidManifest.xml
+├── src/main/                    ← Legacy desktop sources (kept for reference)
+├── docs/                        ← PRD, architecture, protocol specs
+├── design/                      ← Theme, mockups, assets
+└── README.md
+```
+
+---
+
+*Updated 2026-03-08 — migrated to Kotlin Multiplatform*
 

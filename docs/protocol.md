@@ -13,31 +13,52 @@
 - **Frequency**: Every 3 seconds per instance
 
 ### Packet Format
-UTF-8 encoded JSON, max size ~256 bytes:
+UTF-8 encoded JSON, max size 512 bytes:
 
 ```json
 {
   "type": "ANNOUNCE",
   "version": 1,
   "id": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "Alice",
-  "port": 49152
+  "port": 49152,
+  "secretHash": "a3f1..."
 }
 ```
 
-| Field | Type | Description |
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `type` | string | yes | Always `"ANNOUNCE"` |
+| `version` | integer | yes | Protocol version (currently `1`) |
+| `id` | string | yes | UUID v4, stable per app session |
+| `port` | integer | yes | TCP server port for this instance |
+| `secretHash` | string | no | SHA-256 hex of the network passphrase (see below) |
+
+> **Note**: The `name` field was removed in v1.1. Display names are now exchanged via TCP HELLO handshake after discovery to limit information broadcast over UDP.
+
+### Network Passphrase
+
+When a user enables the network passphrase feature in Settings, each ANNOUNCE packet includes a `secretHash` field containing the hex-encoded SHA-256 hash of the configured passphrase. The plaintext passphrase is never transmitted.
+
+**Filtering rules (applied by the receiver):**
+
+| My `secretHash` | Peer `secretHash` | Action |
 |---|---|---|
-| `type` | string | Always `"ANNOUNCE"` |
-| `version` | integer | Protocol version (currently `1`) |
-| `id` | string | UUID v4, stable per app session |
-| `name` | string | Display name (max 32 chars) |
-| `port` | integer | TCP server port for this instance |
+| set | same value | Accept peer normally |
+| set | different value | Silently drop ANNOUNCE |
+| set | absent | Silently drop ANNOUNCE |
+| absent | absent | Accept peer normally |
+| absent | set | Emit `onSecretRequired` event; prompt user to enter passphrase |
+
+When `onSecretRequired` fires, the UI shows `SecretJoinDialog`, allowing the user to enter the passphrase. On confirmation, the hash is stored and the local peer enables passphrase mode, allowing the peer to be discovered on the next broadcast cycle.
+
+The feature is **off by default** to preserve the zero-configuration experience.
 
 ### Peer Lifecycle
-- Peer becomes **visible** when first `ANNOUNCE` is received
-- Peer is **updated** if `name` or `port` changes
+- Peer becomes **visible** when first `ANNOUNCE` is received and passes secret filtering
+- Peer is **updated** if `port` or source IP changes
 - Peer is **removed** if no `ANNOUNCE` received for 12 seconds
 - Self-announcements (matching own `id`) are silently ignored
+- Peers exceeding the table cap of 32 are silently dropped
 
 ---
 
@@ -85,6 +106,44 @@ UTF-8 encoded JSON, max size ~256 bytes:
 | `to` | string | Recipient's peer ID |
 | `text` | string | Message content (max ~1 MB) |
 | `timestamp` | integer | Unix timestamp in milliseconds |
+
+#### File Offer Message
+```json
+{
+  "type": "file_offer",
+  "id": "transfer-uuid-v4",
+  "from": "sender-peer-id",
+  "fromName": "Alice",
+  "to": "recipient-peer-id",
+  "fileName": "photo.jpg",
+  "fileSize": 2097152,
+  "transferPort": 52341,
+  "timestamp": 1709337600000
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `type` | string | `"file_offer"` |
+| `fileName` | string | Original filename |
+| `fileSize` | integer | Total byte size |
+| `transferPort` | integer | Port of the sender's one-shot TCP file server |
+
+#### HELLO Message
+Sent immediately after a new peer is discovered via UDP. Used to exchange display names without broadcasting them over UDP.
+
+```json
+{
+  "type": "hello",
+  "id": "msg-uuid-v4",
+  "from": "sender-peer-id",
+  "fromName": "Alice",
+  "to": "recipient-peer-id",
+  "timestamp": 1709337600000
+}
+```
+
+The receiver updates its peer name and reciprocates with its own HELLO if it hasn't done so yet.
 
 ---
 

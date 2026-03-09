@@ -18,7 +18,12 @@
       "Bash(rm:*)",
       "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew createDistributable:*)",
       "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew packageMsi:*)",
-      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew generateIcon:*)"
+      "Bash(JAVA_HOME=\"/c/Program Files/Eclipse Adoptium/jdk-21.0.9.10-hotspot\" ./gradlew generateIcon:*)",
+      "Bash(./gradlew compileKotlinDesktop:*)",
+      "Bash(./gradlew run:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(printf:*)",
+      "Bash(./gradlew tasks:*)"
     ]
   }
 }

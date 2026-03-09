@@ -106,3 +106,46 @@ All significant architectural and product decisions are recorded here.
 
 **Phase 2 plan**: Write history to `~/.nocloudchat/history.json` (append-only, per-peer files).
 
+---
+
+## DEC-007: Migrate to Kotlin Multiplatform for Android Support
+
+**Date**: 2026-03-08
+**Participants**: Tech Lead, PM
+**Status**: Decided
+
+**Decision**: Migrate the project from a single `kotlin("jvm")` module to **Kotlin Multiplatform** with `desktop` (JVM) and `androidTarget` targets.
+
+**Rationale**:
+- Android support is listed as a stretch goal in `CLAUDE.md` and the project constitution
+- KMP allows all networking, state management, and UI code to live in `commonMain` and be compiled for both targets with zero duplication
+- The `expect`/`actual` mechanism cleanly isolates the handful of platform-specific calls (`openFileInExplorer`, `getDownloadDirectory`, `detectSsid`) without polluting shared code
+- JetBrains Compose Multiplatform already supports Android — no additional UI framework needed
+- The desktop distribution pipeline is unchanged; `compose.desktop {}` config is preserved as-is
+- Sharing ~95% of code between desktop and Android ensures feature parity is maintained as the app evolves
+
+**Trade-offs**:
+- Build complexity increases slightly (Android SDK required for Android builds)
+- `local.properties` with `sdk.dir` must be set for Android builds (already present)
+- `javax.swing.*` calls in `ChatPanel` (file picker) remain desktop-only; Android needs a separate file picker implementation (Phase 2)
+
+---
+
+## DEC-008: Network Passphrase Feature
+
+**Date**: 2026-03-08
+**Participants**: Tech Lead, Netsec, PM
+**Status**: Decided
+
+**Decision**: Add an opt-in **network passphrase** system where peers filter each other via a SHA-256 hash of a shared passphrase included in UDP ANNOUNCE packets.
+
+**Rationale**:
+- Users on shared networks (apartment buildings, offices, hotels) need a way to isolate their NoCloud Chat group from strangers on the same subnet
+- SHA-256 hash avoids transmitting the plaintext passphrase over the network
+- Enforced at the discovery layer (UDP) — mismatched peers never reach the TCP messaging layer
+- Default-off design preserves the zero-configuration experience for home users
+- When an unprotected peer receives a protected ANNOUNCE, they are prompted via `SecretJoinDialog` to enter the passphrase, maintaining discoverability while respecting the sender's intent
+- Persisted in `~/.nocloudchat/settings.json` so passphrase survives app restarts
+
+**Security note**: SHA-256 of a passphrase is not equivalent to a strong key exchange. This feature provides social/usability isolation, not cryptographic authentication. Full encryption (TLS/Noise) remains a Phase 2 goal.
+

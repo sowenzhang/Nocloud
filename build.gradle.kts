@@ -1,7 +1,10 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 
 plugins {
-    kotlin("jvm") version "2.0.21"
+    kotlin("multiplatform") version "2.0.21"
+    id("com.android.application") version "8.2.2"
     id("org.jetbrains.kotlin.plugin.compose") version "2.0.21"
     id("org.jetbrains.compose") version "1.7.3"
 }
@@ -9,25 +12,72 @@ plugins {
 group = "com.nocloudchat"
 version = "1.0.0"
 
-repositories {
-    mavenCentral()
-    google()
-    maven("https://maven.pkg.jetbrains.space/public/p/compose/dev")
+kotlin {
+    jvm("desktop")
+
+    androidTarget {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+
+    sourceSets {
+        val commonMain by getting {
+            dependencies {
+                implementation(compose.runtime)
+                implementation(compose.foundation)
+                implementation(compose.material3)
+                implementation(compose.ui)
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
+                implementation("org.json:json:20240303")
+            }
+        }
+
+        val desktopMain by getting {
+            dependencies {
+                implementation(compose.desktop.currentOs)
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.1")
+            }
+        }
+
+        val androidMain by getting {
+            dependencies {
+                implementation("androidx.activity:activity-compose:1.9.3")
+                implementation("androidx.core:core-ktx:1.13.1")
+                // Force 16 KB page-size aligned version of graphics-path (fixes Android Studio warning)
+                implementation("androidx.graphics:graphics-path:1.0.1")
+            }
+        }
+    }
 }
 
-dependencies {
-    // Compose Desktop (includes UI, Foundation, Graphics)
-    implementation(compose.desktop.currentOs)
+android {
+    namespace = "com.nocloudchat"
+    compileSdk = 35
 
-    // Material3 for Compose
-    implementation(compose.material3)
+    defaultConfig {
+        applicationId = "com.nocloudchat.app"
+        minSdk = 26
+        targetSdk = 35
+        versionCode = 1
+        versionName = "1.0.0"
+    }
 
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.8.1")
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
 
-    // JSON (lightweight, zero transitive deps)
-    implementation("org.json:json:20240303")
+    sourceSets {
+        getByName("main") {
+            manifest.srcFile("src/androidMain/AndroidManifest.xml")
+            res.srcDirs("src/androidMain/res")
+            // KMP manages Kotlin sources via androidMain/commonMain — exclude legacy src/main/kotlin
+            // to prevent duplicate class declarations
+            java.setSrcDirs(listOf<File>())
+            kotlin.setSrcDirs(listOf<File>())
+        }
+    }
 }
 
 compose.desktop {
@@ -56,18 +106,14 @@ compose.desktop {
     }
 }
 
-kotlin {
-    jvmToolchain(21)
-}
-
 // ─── Icon generator ───────────────────────────────────────────────────────────
-// Run once (or after design changes): ./gradlew generateIcon
 tasks.register<JavaExec>("generateIcon") {
     group       = "tools"
     description = "Generates app icons into icons/ and src/main/resources/"
-    classpath   = sourceSets["main"].runtimeClasspath
+    dependsOn("compileDesktopMainKotlin")
+    val compilation = (kotlin.targets.getByName("desktop") as KotlinJvmTarget)
+        .compilations.getByName("main")
+    classpath   = compilation.output.allOutputs + compilation.runtimeDependencyFiles
     mainClass.set("com.nocloudchat.tools.GenerateIconKt")
-    dependsOn("compileKotlin")
     workingDir  = projectDir
 }
-

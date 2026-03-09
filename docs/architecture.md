@@ -1,95 +1,104 @@
 # NoCloudChat — System Architecture
 
-**Version**: 1.0 | **Date**: 2026-03-02 | **Author**: Tech Lead
+**Version**: 2.0 | **Date**: 2026-03-08 | **Author**: Tech Lead
 
 ---
 
 ## 1. Overview
 
-NoCloudChat uses an Electron shell with a strict process separation between the main (Node.js) process and the renderer (browser sandbox). All networking runs in the main process; the renderer only handles UI.
+NoCloudChat is a Kotlin Multiplatform (KMP) application targeting Desktop (JVM) and Android. The UI is built with JetBrains Compose Multiplatform and rendered natively via Skia on all platforms. All networking code runs in shared Kotlin coroutines on the IO dispatcher.
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        NoCloudChat Process                    │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                    Main Process (Node.js)             │   │
-│  │                                                      │   │
-│  │  ┌──────────────┐    ┌─────────────────────────────┐ │   │
-│  │  │  Discovery   │    │       Messenger             │ │   │
-│  │  │  (UDP :54321)│    │  (TCP server: random port)  │ │   │
-│  │  └──────┬───────┘    └───────────────┬─────────────┘ │   │
-│  │         │                            │               │   │
-│  │         └──────────┬─────────────────┘               │   │
-│  │                    │ IPC (contextBridge)              │   │
-│  └────────────────────┼─────────────────────────────────┘   │
-│                       │                                      │
-│  ┌────────────────────┼─────────────────────────────────┐   │
-│  │              Renderer Process (Chromium)             │   │
-│  │                    │                                 │   │
-│  │  ┌─────────────────▼───────────────────────────────┐ │   │
-│  │  │         app.js (Vanilla JS SPA)                 │ │   │
-│  │  │   Peer List View ↔ Chat View ↔ Settings Panel   │ │   │
-│  │  └─────────────────────────────────────────────────┘ │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        commonMain (shared)                       │
+│                                                                  │
+│  ┌─────────────┐  ┌─────────────┐  ┌──────────────────────────┐ │
+│  │  Discovery  │  │  Messenger  │  │       FileTransfer        │ │
+│  │ (UDP :54321)│  │  (TCP random│  │  (TCP one-shot per file)  │ │
+│  └──────┬──────┘  │   port)     │  └──────────────────────────┘ │
+│         │         └──────┬──────┘                               │
+│         └────────┬────────┘                                      │
+│                  ▼                                               │
+│            ┌──────────┐                                          │
+│            │ AppState │  (StateFlow ViewModel)                   │
+│            └────┬─────┘                                          │
+│                 ▼                                                │
+│          ┌────────────┐                                          │
+│          │  Compose UI│  (App, Sidebar, ChatPanel, …)            │
+│          └────────────┘                                          │
+└─────────────────────────────────────────────────────────────────┘
+         ▲                              ▲
+┌────────┴───────────┐      ┌───────────┴──────────┐
+│   desktopMain      │      │     androidMain       │
+│                    │      │                       │
+│  Main.kt           │      │  MainActivity.kt      │
+│  Platform.kt       │      │  Platform.kt          │
+│  DesktopSsid.kt    │      │  (SSID stub)          │
+│  GenerateIcon.kt   │      │                       │
+└────────────────────┘      └───────────────────────┘
 ```
 
 ---
 
 ## 2. Component Descriptions
 
-### 2.1 Discovery (`src/network/discovery.js`)
+### 2.1 Discovery (`commonMain/network/Discovery.kt`)
 - **Protocol**: UDP broadcast
-- **Port**: 54321 (fixed, well-known)
+- **Port**: 54321 (fixed, `SO_REUSEADDR`)
 - **Behaviour**:
-  - Binds to port 54321 with `reuseAddr: true` to allow multiple instances per host
-  - Broadcasts `ANNOUNCE` JSON to subnet broadcast address every 3 seconds
-  - Listens for `ANNOUNCE` from other instances
-  - Maintains a `Map<peerId, PeerInfo>` with `lastSeen` timestamps
-  - Prunes stale peers every 5 seconds (timeout = 12s)
-  - Fires `onPeersChanged` callback to main.js when peer list changes
+  - Broadcasts `ANNOUNCE` JSON to all subnet broadcast addresses every 3 seconds
+  - Maintains a `ConcurrentHashMap<peerId, PeerEntry>` with `lastSeen` timestamps
+  - Prunes stale peers after 12 seconds of silence
+  - Rate-limits inbound broadcasts: max 5 packets per 10 s per source IP
+  - Enforces optional network passphrase via `secretHash` (SHA-256) in ANNOUNCE
+  - Fires `onPeersChanged` callback when the peer list changes
 
-### 2.2 Messenger (`src/network/messenger.js`)
-- **Protocol**: TCP with length-prefix framing
-- **Port**: OS-assigned random port (announced via Discovery)
+### 2.2 Messenger (`commonMain/network/Messenger.kt`)
+- **Protocol**: TCP with 4-byte big-endian length-prefix framing
+- **Port**: OS-assigned random ephemeral port; advertised in each ANNOUNCE
 - **Behaviour**:
-  - Starts a TCP server on `0.0.0.0:0` (OS picks port)
-  - Incoming connections: framing buffer handles partial reads
-  - Outgoing messages: new TCP connection per message → write → close
-  - Fires `onMessage` callback for each complete received message
+  - Starts a `ServerSocket(0)` — OS picks port
+  - New TCP connection per message (fire-and-forget)
+  - Max message payload: 10 MB (enforced on receive)
+  - Fires `onMessage(Message)` callback for each valid inbound message
 
-### 2.3 Main Process (`src/main.js`)
-- Initialises Messenger first (to get TCP port), then Discovery
-- Maintains in-memory message history (`Map<peerId, Message[]>`)
-- Registers IPC handlers (get-peers, send-message, get-messages, etc.)
-- Pushes peer updates and new messages to renderer via `webContents.send`
+### 2.3 FileTransfer (`commonMain/network/FileTransfer.kt`)
+- **Protocol**: Dedicated TCP connection per transfer
+- Sender opens a one-shot `ServerSocket(0)`, announces port in `FILE_OFFER` message
+- Wire format: 8-byte `Long` total size header, then raw bytes
+- Chunked streaming (64 KB buffer) — never loads full file into memory
+- Progress callbacks `onProgress`, `onComplete`, `onFailed` wired to `AppState`
 
-### 2.4 Preload (`src/preload.js`)
-- Uses `contextBridge.exposeInMainWorld` to expose a `window.noCloudChat` API
-- All IPC is one-directional through typed methods — no raw IPC access
+### 2.4 AppState (`commonMain/state/AppState.kt`)
+- Central reactive state container — acts as a ViewModel
+- All mutable state exposed as `StateFlow<T>` (peers, messages, transfers, theme, etc.)
+- Launches `Discovery` and `Messenger` during `init`
+- Coordinates HELLO handshake: exchanges display names on new peer discovery
+- Uses `expect` functions (`openFileInExplorer`, `getDownloadDirectory`, `detectSsidPlatform`) for platform-specific behaviour
 
-### 2.5 Renderer (`src/renderer/`)
-- Vanilla JS single-page app (no framework, no build step)
-- `app.js`: state management, DOM manipulation, event handlers
-- `index.html`: static structure
-- `style.css`: full dark theme with CSS custom properties
+### 2.5 UI (`commonMain/ui/`)
+- Pure `@Composable` functions — no platform-specific UI code
+- `App` — root composable, hosts all dialogs and layout
+- `Sidebar` — peer list, network trust bar, settings gear
+- `ChatPanel` — message thread, text input, file picker (desktop: Swing JFileChooser)
+- `SettingsDialog` — name, dark/light mode toggle, passphrase toggle
+- `ToastHost` — animated slide-in notification for background messages
+- `SecretJoinDialog` — prompted when a protected peer is discovered
 
 ---
 
 ## 3. Data Flow: Sending a Message
 
 ```
-User types text → clicks Send
-  → renderer: window.noCloudChat.sendMessage(peerId, text)
-  → IPC invoke: 'send-message'
-  → main.js: look up peer in Discovery.getPeerList()
-  → main.js: Messenger.sendMessage(peer, payload)
-    → open TCP connection to peer.ip:peer.port
-    → write [4-byte length][JSON payload]
-    → close connection
-  → return msg object to renderer
-  → renderer: append bubble to chat view
+User types text → presses Alt+Enter or Send button
+  → ChatPanel: scope.launch { state.sendMessage(peerId, text) }
+  → AppState.sendMessage: build Message object
+  → Messenger.sendMessage(peer, msg):
+      open TCP to peer.ip:peer.port (5s timeout)
+      write [4-byte length][JSON payload]
+      close connection
+  → AppState: appendMessage(peerId, msg) → _messages StateFlow updated
+  → Compose recompose: new bubble appears in LazyColumn
 ```
 
 ---
@@ -97,34 +106,74 @@ User types text → clicks Send
 ## 4. Data Flow: Receiving a Message
 
 ```
-Remote instance sends TCP data to our Messenger server
-  → Messenger._handleSocket: buffer → parse JSON → onMessage callback
-  → main.js: store in messageHistory, send IPC event 'new-message'
-  → preload: ipcRenderer.on('new-message', callback)
-  → renderer: append bubble if active chat, else show toast + badge
+Remote instance opens TCP to our Messenger ServerSocket
+  → Messenger.handleSocket: read [length][bytes] → parse JSON → onMessage(msg)
+  → AppState.handleIncoming(msg):
+      if HELLO: update resolvedNames + peer display name, optionally reciprocate
+      else: appendMessage, increment unreadCounts, emit ToastEvent
+  → StateFlow updates trigger Compose recomposition:
+      active chat → new bubble; inactive → unread badge + toast
 ```
 
 ---
 
-## 5. IPC API Summary
+## 5. Platform-Specific Layers (expect/actual)
 
-| Channel | Direction | Description |
-|---|---|---|
-| `get-my-info` | renderer→main | Get own peer ID and display name |
-| `get-peers` | renderer→main | Get current peer list |
-| `send-message` | renderer→main | Send text to a peer |
-| `get-messages` | renderer→main | Get message history for a peer |
-| `set-display-name` | renderer→main | Update display name |
-| `peers-updated` | main→renderer | Push: peer list changed |
-| `new-message` | main→renderer | Push: new incoming message |
+| Function | commonMain (expect) | desktopMain (actual) | androidMain (actual) |
+|---|---|---|---|
+| `openFileInExplorer(path)` | expect | `java.awt.Desktop.open(parent)` | Android Intent (TODO) |
+| `getDownloadDirectory()` | expect | `~/Downloads/NoCloud Chat` | `/storage/emulated/0/Download/…` |
+| `detectSsidPlatform()` | expect | Calls `detectSsid()` via OS CLI | null (requires Context) |
 
 ---
 
-## 6. Security Model
+## 6. Source Set Structure
 
-- `contextIsolation: true` — renderer cannot access Node APIs directly
-- `nodeIntegration: false` — Node.js not available in renderer
-- `sandbox: false` — needed only for preload script
-- All networking runs exclusively in main process
-- No external network access (no HTTP calls, no DNS lookups outside LAN)
+```
+src/
+├── commonMain/kotlin/com/nocloudchat/
+│   ├── App.kt                    ← Root @Composable
+│   ├── Platform.kt               ← expect declarations
+│   ├── Preferences.kt            ← Settings persistence
+│   ├── model/
+│   │   ├── Message.kt
+│   │   └── Peer.kt
+│   ├── network/
+│   │   ├── Discovery.kt          ← UDP peer discovery
+│   │   ├── Messenger.kt          ← TCP messaging
+│   │   └── FileTransfer.kt       ← File transfer
+│   ├── state/
+│   │   └── AppState.kt           ← Reactive ViewModel
+│   └── ui/
+│       ├── theme/Theme.kt
+│       ├── components/Avatar.kt
+│       ├── Sidebar.kt
+│       ├── ChatPanel.kt
+│       ├── WelcomePanel.kt
+│       ├── SettingsDialog.kt
+│       ├── AboutDialog.kt
+│       ├── ToastHost.kt
+│       └── SecretJoinDialog.kt
+├── desktopMain/kotlin/com/nocloudchat/
+│   ├── Main.kt                   ← application {} entry point
+│   ├── Platform.kt               ← actual implementations
+│   ├── network/DesktopSsid.kt    ← SSID via OS CLI (netsh/airport/nmcli)
+│   └── tools/GenerateIcon.kt     ← Icon generator utility
+└── androidMain/kotlin/com/nocloudchat/
+    ├── MainActivity.kt           ← ComponentActivity entry point
+    └── Platform.kt               ← actual implementations (stubs)
+```
 
+---
+
+## 7. Security Model
+
+- **Network passphrase**: opt-in SHA-256 hash in ANNOUNCE; mismatched peers silently dropped
+- **Rate limiting**: max 5 UDP packets per 10 s per source IP; prevents broadcast flooding
+- **Message size caps**: 512 bytes max UDP, 10 MB max TCP payload
+- **Input validation**: all inbound JSON validated before processing; malformed packets dropped
+- **No external access**: zero outbound connections outside the LAN subnet
+- **Peer table cap**: max 32 peers to prevent memory exhaustion
+- **Trust store**: per-network-ID trust recorded in `~/.nocloudchat/settings.json`
+
+See `docs/security.md` for the full threat model.
