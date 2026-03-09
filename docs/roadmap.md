@@ -28,12 +28,14 @@
 
 | Feature | Priority | Notes |
 |---|---|---|
-| File transfer (drag & drop) | High | Chunked TCP transfer |
-| Voice message recording | High | Web Audio API + send as binary |
+| File transfer (drag & drop) | High | ✅ Done — Chunked TCP transfer |
+| Network passphrase (security) | High | ✅ Done — SHA-256 hash in ANNOUNCE |
+| Android support (KMP) | High | ✅ Done — Kotlin Multiplatform |
+| Voice message recording | High | Kotlin audio capture + send as binary |
 | Typing indicator | Medium | TYPING message type |
 | Message delivery receipts | Medium | DELIVERED message type |
 | Persistent message history | Medium | `~/.nocloudchat/` local storage |
-| End-to-end encryption | High | TLS or NaCl for privacy |
+| End-to-end encryption | High | TLS or Noise protocol for privacy |
 
 ---
 
@@ -48,7 +50,7 @@
 | Presence / status | Medium | Away, Busy, Available |
 | System tray / notifications | Medium | OS-native notifications |
 | Custom avatar | Low | Image file or initials |
-| Light/dark theme toggle | Low | CSS variable swap |
+| Light/dark theme toggle | Low | ✅ Done — Compose Material3 theme swap |
 
 ---
 
@@ -56,7 +58,7 @@
 
 | Feature | Notes |
 |---|---|
-| iOS / Android app | React Native or Flutter |
-| Screen sharing | WebRTC (LAN only) |
+| iOS / Android app | Android ✅ Done via KMP; iOS possible with Compose Multiplatform |
+| Screen sharing | Platform-specific screen capture (LAN only) |
 | Ephemeral channels | Auto-delete after session |
 

@@ -40,8 +40,8 @@ NoCloudChat feels like a walkie-talkie transformed into a modern chat app — im
 | Token | Value | Usage |
 |---|---|---|
 | `--text` | `#eef2ff` | Primary content text |
-| `--text-muted` | `#7b7f9e` | Secondary text, labels, peer IP |
-| `--text-dim` | `#4a4e6e` | Timestamps, dividers, empty state text |
+| `--text-muted` | `#9ba3c9` | Secondary text, labels, peer IP |
+| `--text-dim` | `#5c6485` | Timestamps, dividers, empty state text |
 
 ### Semantic Colors
 

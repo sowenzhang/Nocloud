@@ -10,7 +10,8 @@ plugins {
 }
 
 group = "com.nocloudchat"
-version = "1.0.0"
+val appVersion = System.getenv("APP_VERSION") ?: "1.0.0"
+version = appVersion
 
 kotlin {
     jvm("desktop")
@@ -60,7 +61,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = appVersion
     }
 
     compileOptions {
@@ -87,7 +88,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "NoCloud Chat"
-            packageVersion = "1.0.0"
+            packageVersion = appVersion
             description = "Private home chat — no internet, no accounts, no cloud"
             copyright = "© 2026 NoCloud Chat"
 

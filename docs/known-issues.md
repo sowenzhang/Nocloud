@@ -1,12 +1,15 @@
 # NoCloudChat — Known Issues
 
-**Last updated**: 2026-03-02
+**Last updated**: 2026-03-09
 
 ---
 
 ## Open Issues
 
-*No known issues at this time. All MVP acceptance criteria pass.*
+| Issue | Severity | Notes |
+|---|---|---|
+| Android `pickFile()` not implemented | Medium | File picker on Android is a TODO stub; desktop file picker works |
+| Android `openFileInExplorer()` not implemented | Low | Opening received files on Android is a TODO stub |
 
 ---
 

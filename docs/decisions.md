@@ -51,8 +51,8 @@ All significant architectural and product decisions are recorded here.
 **Decision**: Use **UDP broadcast** (not mDNS/Bonjour).
 
 **Rationale**:
-- `node-mdns` and similar packages require native compilation (node-gyp), creating platform-specific build issues
-- UDP broadcast via `dgram` is pure JavaScript — zero native dependencies
+- mDNS/Bonjour libraries add native dependencies and platform-specific build issues
+- UDP broadcast via Java `DatagramSocket` is built into the JVM — zero external dependencies
 - Works reliably on flat LAN networks (same subnet), which is the target environment
 - Simple `ANNOUNCE` format is easy to implement, debug, and extend
 
@@ -69,10 +69,10 @@ All significant architectural and product decisions are recorded here.
 **Decision**: Use **raw TCP with 4-byte length-prefix framing** (not WebSockets, not HTTP).
 
 **Rationale**:
-- Pure Node.js `net` module — zero dependencies
+- Java `ServerSocket` / `Socket` — built into the JVM, zero external dependencies
 - Length-prefix framing is simpler than WebSocket handshake for LAN messaging
 - Fire-and-forget connection model (new TCP per message) eliminates connection state management
-- WebSocket (`ws` npm package) would add one dependency without meaningful benefit at this scale
+- WebSocket libraries would add unnecessary complexity without meaningful benefit at this scale
 
 ---
 
@@ -82,12 +82,12 @@ All significant architectural and product decisions are recorded here.
 **Participants**: Tech Lead
 **Status**: Decided
 
-**Decision**: The app's only npm dependency is `electron` (devDependency). No runtime npm packages.
+**Decision**: The app's only runtime dependency beyond the Kotlin/Compose stdlib is `org.json:json` (a single JAR with zero transitive dependencies). No other external libraries.
 
 **Rationale**:
 - Reduces install surface and potential breakage
 - Proves the architecture is sound (no duct-tape libraries needed)
-- Faster `npm install` in demo environments
+- All networking uses JVM stdlib (`DatagramSocket`, `ServerSocket`) — no third-party network libraries
 
 ---
 

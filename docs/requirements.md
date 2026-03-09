@@ -33,16 +33,16 @@ In shared offices, events, classrooms, or venues, people often need to communica
 ## 4. MVP Scope (MoSCoW)
 
 ### Must Have (MVP v1)
-- [ ] App launches and immediately scans the subnet for peers
-- [ ] Peer list shows all discovered NoCloudChat instances with display name and IP
-- [ ] One-to-one text messaging (send and receive)
-- [ ] Display name customisable in settings
-- [ ] Works on Windows, macOS, and Linux
-- [ ] Messages persist for the duration of the session (in-memory)
-- [ ] Unread message count badge on peer list
+- [x] App launches and immediately scans the subnet for peers
+- [x] Peer list shows all discovered NoCloudChat instances with display name and IP
+- [x] One-to-one text messaging (send and receive)
+- [x] Display name customisable in settings
+- [x] Works on Windows, macOS, and Linux
+- [x] Messages persist for the duration of the session (in-memory)
+- [x] Unread message count badge on peer list
 
 ### Should Have (Phase 2)
-- [ ] File sharing (drag and drop)
+- [x] File sharing (drag and drop) — ✅ Implemented
 - [ ] Voice message recording and playback
 - [ ] Typing indicator
 
@@ -53,10 +53,10 @@ In shared offices, events, classrooms, or venues, people often need to communica
 - [ ] Persistent message history (local file)
 
 ### Won't Have (MVP)
-- [ ] Internet communication (by design)
-- [ ] User accounts or authentication
+- [x] Internet communication (by design — never)
+- [x] User accounts or authentication (by design — never)
 - [ ] End-to-end encryption (LAN-only, deferred to Phase 2)
-- [ ] Mobile apps
+- [x] ~~Mobile apps~~ — Android added via Kotlin Multiplatform
 
 ---
 
@@ -71,7 +71,7 @@ In shared offices, events, classrooms, or venues, people often need to communica
 - App shows a "Scanning subnet…" indicator immediately on launch
 - Within 5 seconds on a typical LAN, any peer running NoCloudChat appears in the list
 - Each peer shows their display name and IP address
-- A peer that shuts down is removed from the list within 15 seconds
+- A peer that shuts down is removed from the list within 12 seconds
 - Multiple peers (3+) are all visible simultaneously
 
 ---
@@ -96,7 +96,7 @@ In shared offices, events, classrooms, or venues, people often need to communica
 **So that** we can communicate in real time.
 
 **Acceptance Criteria**:
-- Message is sent on pressing Enter (Shift+Enter for newline)
+- Message is sent on pressing Alt+Enter (Enter for newline)
 - Sent messages appear in the chat immediately (no waiting)
 - Received messages appear in the chat automatically (no refresh)
 - Messages show sender name and timestamp
@@ -166,12 +166,12 @@ In shared offices, events, classrooms, or venues, people often need to communica
 ## 7. Out of Scope for MVP
 
 - End-to-end encryption
-- File transfer
+- ~~File transfer~~ — now implemented (Phase 2)
 - Voice/audio messaging
 - Group chats
 - Persistent message storage
 - Push notifications (OS-level)
-- Mobile support
+- ~~Mobile support~~ — Android now implemented via KMP
 - Internet relay
 
 ---

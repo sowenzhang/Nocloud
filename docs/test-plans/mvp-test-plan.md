@@ -30,7 +30,7 @@
 ### TC-03: Peer goes offline
 1. Start Instance A and B (both visible to each other)
 2. Close Instance B
-3. Wait 15 seconds
+3. Wait 12 seconds
 4. **Expected**: Instance B disappears from A's peer list
 5. **Expected**: Peer count badge updates
 
@@ -45,7 +45,7 @@
 
 ### TC-05: Send message
 1. Open A and B (A sees B in peer list)
-2. On A: click on B → type "Hello" → press Enter
+2. On A: click on B → type "Hello" → press Alt+Enter
 3. **Expected**: "Hello" appears in A's chat view immediately
 4. **Expected**: "Hello" appears in B's chat view immediately
 5. **Expected**: Message shows timestamp and sender name on B's side
@@ -56,9 +56,9 @@
 3. **Expected**: Message bubble alignment: A's messages right (red), B's messages left (blue)
 
 ### TC-07: Multi-line message
-1. Type a message and press Shift+Enter
+1. Type a message and press Enter
 2. **Expected**: New line added to input (message not sent)
-3. Press Enter
+3. Press Alt+Enter
 4. **Expected**: Multi-line message sent as a single bubble
 
 ### TC-08: Empty message not sent
@@ -139,7 +139,7 @@
 |---|---|
 | TC-01 | Peer discovered in < 5s |
 | TC-02 | All 3 peers visible |
-| TC-03 | Peer removed within 15s |
+| TC-03 | Peer removed within 12s |
 | TC-05 | Message visible on both sides |
 | TC-06 | Correct bubble alignment |
 | TC-10 | Unread badge shown/cleared |

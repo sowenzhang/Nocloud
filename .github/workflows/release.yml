@@ -11,6 +11,9 @@ on:
         required: true
         default: 'v0.0.0'
 
+env:
+  TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+
 jobs:
   package-windows:
     name: Package Windows (MSI)
@@ -34,6 +37,10 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle.kts', 'gradle/wrapper/gradle-wrapper.properties') }}
           restore-keys: |
             gradle-${{ runner.os }}-
+
+      - name: Set version
+        shell: bash
+        run: echo "APP_VERSION=${TAG#v}" >> $GITHUB_ENV
 
       - name: Build MSI
         shell: bash
@@ -71,6 +78,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Set version
+        run: echo "APP_VERSION=${TAG#v}" >> $GITHUB_ENV
+
       - name: Build DMG
         shell: bash
         run: ./gradlew packageDmg --no-daemon
@@ -106,6 +116,9 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x ./gradlew
+
+      - name: Set version
+        run: echo "APP_VERSION=${TAG#v}" >> $GITHUB_ENV
 
       - name: Build DEB
         shell: bash
@@ -143,6 +156,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Set version
+        run: echo "APP_VERSION=${TAG#v}" >> $GITHUB_ENV
+
       - name: Build APK
         id: build-apk
         shell: bash
@@ -179,8 +195,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
-          name: NoCloud Chat ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
+          tag_name: ${{ env.TAG }}
+          name: NoCloud Chat ${{ env.TAG }}
           files: |
             artifacts/**/*.msi
             artifacts/**/*.dmg
