@@ -39,7 +39,10 @@ fun ChatPanel(state: AppState, peerId: String, onBack: (() -> Unit)? = null) {
     val peers by state.peers.collectAsState()
     val allMessages by state.messages.collectAsState()
     val fileTransfers by state.fileTransfers.collectAsState()
+    val peerNames by state.peerNames.collectAsState()
     val peer = peers.find { it.id == peerId }
+    val isOnline = peer != null
+    val peerName = peer?.name ?: peerNames[peerId] ?: peerId
     val messages = allMessages[peerId] ?: emptyList()
 
     val listState = rememberLazyListState()
@@ -87,7 +90,7 @@ fun ChatPanel(state: AppState, peerId: String, onBack: (() -> Unit)? = null) {
 
     Column(modifier = Modifier.fillMaxSize()) {
         // ── Header ───────────────────────────────────────────────────────────
-        ChatHeader(peerName = peer?.name ?: peerId, onBack = onBack)
+        ChatHeader(peerName = peerName, isOnline = isOnline, onBack = onBack)
         HorizontalDivider(color = NoCloudChatColors.Border, thickness = 1.dp)
 
         // ── Message list ──────────────────────────────────────────────────────
@@ -190,7 +193,7 @@ fun ChatPanel(state: AppState, peerId: String, onBack: (() -> Unit)? = null) {
             Spacer(Modifier.width(8.dp))
 
             // Send button
-            val canSend = inputText.isNotBlank() && !isSending
+            val canSend = inputText.isNotBlank() && !isSending && isOnline
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
@@ -206,7 +209,7 @@ fun ChatPanel(state: AppState, peerId: String, onBack: (() -> Unit)? = null) {
 }
 
 @Composable
-private fun ChatHeader(peerName: String, onBack: (() -> Unit)? = null) {
+private fun ChatHeader(peerName: String, isOnline: Boolean, onBack: (() -> Unit)? = null) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
@@ -244,10 +247,14 @@ private fun ChatHeader(peerName: String, onBack: (() -> Unit)? = null) {
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(NoCloudChatColors.OnlineGreen)
+                    .background(if (isOnline) NoCloudChatColors.OnlineGreen else NoCloudChatColors.TextDim)
             )
             Spacer(Modifier.width(5.dp))
-            Text("Online", fontSize = 12.sp, color = NoCloudChatColors.OnlineGreen)
+            Text(
+                text = if (isOnline) "Online" else "Offline",
+                fontSize = 12.sp,
+                color = if (isOnline) NoCloudChatColors.OnlineGreen else NoCloudChatColors.TextDim,
+            )
         }
     }
 }

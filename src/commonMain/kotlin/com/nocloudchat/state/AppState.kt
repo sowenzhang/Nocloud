@@ -136,6 +136,11 @@ class AppState {
 
     // Tracks resolved display names received via HELLO handshake
     private val resolvedNames = mutableMapOf<String, String>()
+
+    // Persists last-known names so the UI can show them even after a peer goes offline
+    private val _peerNames = MutableStateFlow<Map<String, String>>(emptyMap())
+    val peerNames: StateFlow<Map<String, String>> = _peerNames.asStateFlow()
+
     // Tracks which peer IDs we've already sent a HELLO to this session
     private val helloSentTo = mutableSetOf<String>()
 
@@ -321,6 +326,7 @@ class AppState {
             MessageType.HELLO -> {
                 // Update resolved name and peer list — don't add to chat
                 resolvedNames[msg.fromId] = msg.fromName
+                _peerNames.value = resolvedNames.toMap()
                 _peers.value = _peers.value.map { p ->
                     if (p.id == msg.fromId) p.copy(name = msg.fromName) else p
                 }
