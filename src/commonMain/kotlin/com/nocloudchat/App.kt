@@ -34,6 +34,8 @@ fun App(state: AppState) {
             modifier = Modifier
                 .fillMaxSize()
                 .background(NoCloudChatColors.Background)
+                .safeDrawingPadding()
+                .imePadding()
         ) {
             val isMobile = maxWidth < MOBILE_BREAKPOINT
 
