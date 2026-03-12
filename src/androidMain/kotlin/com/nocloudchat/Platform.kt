@@ -1,13 +1,46 @@
 package com.nocloudchat
 
 import android.content.Context
+import android.content.Intent
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.Environment
+import android.provider.DocumentsContract
 import java.io.File
 
 actual fun openFileInExplorer(path: String) {
-    // TODO: launch Android file manager Intent
+    runCatching {
+        val context = AppContextHolder.appContext
+        val target = File(path)
+        val directory = if (target.isDirectory) target else target.parentFile ?: target
+
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val downloadDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (directory.canonicalPath.startsWith(downloadDir.canonicalPath)) {
+                val relative = directory.canonicalPath.removePrefix(downloadDir.canonicalPath).trimStart('/')
+                data = DocumentsContract.buildRootUri(
+                    "com.android.externalstorage.documents",
+                    "home"
+                )
+                if (relative.isNotEmpty()) {
+                    putExtra("android.provider.extra.INITIAL_URI", DocumentsContract.buildDocumentUri(
+                        "com.android.externalstorage.documents",
+                        "home:$relative"
+                    ))
+                }
+            } else {
+                data = DocumentsContract.buildRootUri(
+                    "com.android.externalstorage.documents",
+                    "primary"
+                )
+            }
+            type = "vnd.android.document/root"
+        }
+
+        context.startActivity(intent)
+    }
 }
 
 actual fun pickFile(): java.io.File? = null // TODO: launch Android file picker Intent
