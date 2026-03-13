@@ -143,7 +143,7 @@ fun ChatPanel(state: AppState, peerId: String, onBack: (() -> Unit)? = null) {
                 onValueChange = { inputText = it },
                 placeholder = {
                     Text(
-                        "Type a message… (Alt+Enter to send)",
+                        if (onBack != null) "Type a message…" else "Type a message… (Alt+Enter to send)",
                         color = NoCloudChatColors.TextDim,
                         fontSize = 14.sp,
                     )
