@@ -49,10 +49,11 @@ fun SettingsDialog(state: AppState, onDismiss: () -> Unit, onOpenAbout: () -> Un
     Dialog(onDismissRequest = onDismiss) {
         Box(
             modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 400.dp)
                 .clip(RoundedCornerShape(18.dp))
                 .background(NoCloudChatColors.Surface)
                 .padding(28.dp)
-                .width(400.dp)
         ) {
             Column {
                 Text(
@@ -231,46 +232,54 @@ fun SettingsDialog(state: AppState, onDismiss: () -> Unit, onOpenAbout: () -> Un
                 Spacer(Modifier.height(28.dp))
 
                 // Buttons
-                Row(
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    TextButton(onClick = onOpenAbout) {
-                        Text(
-                            "About",
-                            fontSize = 12.sp,
-                            color = NoCloudChatColors.TextMuted,
-                        )
-                    }
-                    TextButton(onClick = { onDismiss(); onShowTutorial() }) {
-                        Text(
-                            "Show tutorial",
-                            fontSize = 12.sp,
-                            color = NoCloudChatColors.TextMuted,
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = NoCloudChatColors.TextMuted,
-                        ),
-                        border = BorderStroke(1.dp, NoCloudChatColors.Border),
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Utility links row
+                    Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Cancel", fontWeight = FontWeight.SemiBold)
+                        TextButton(onClick = onOpenAbout) {
+                            Text(
+                                "About",
+                                fontSize = 12.sp,
+                                color = NoCloudChatColors.TextMuted,
+                            )
+                        }
+                        TextButton(onClick = { onDismiss(); onShowTutorial() }) {
+                            Text(
+                                "Show tutorial",
+                                fontSize = 12.sp,
+                                color = NoCloudChatColors.TextMuted,
+                            )
+                        }
                     }
-                    Spacer(Modifier.width(10.dp))
-                    Button(
-                        onClick = ::save,
-                        enabled = nameInput.isNotBlank(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = NoCloudChatColors.Accent,
-                            contentColor = Color.White,
-                        ),
+                    // Action buttons row — always fully visible
+                    Row(
+                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Save", fontWeight = FontWeight.SemiBold)
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = NoCloudChatColors.TextMuted,
+                            ),
+                            border = BorderStroke(1.dp, NoCloudChatColors.Border),
+                        ) {
+                            Text("Cancel", fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Button(
+                            onClick = ::save,
+                            enabled = nameInput.isNotBlank(),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = NoCloudChatColors.Accent,
+                                contentColor = Color.White,
+                            ),
+                        ) {
+                            Text("Save", fontWeight = FontWeight.SemiBold)
+                        }
                     }
                 }
             }
