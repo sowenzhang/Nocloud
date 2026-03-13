@@ -120,7 +120,7 @@ class MessageProtocolTest {
     // ── messageToJson ─────────────────────────────────────────────────────────
 
     @Test
-    fun `messageToJson serialises TEXT message correctly`() {
+    fun `messageToJson serializes TEXT message correctly`() {
         val msg = Message(
             id = baseId, fromId = fromId, fromName = fromName,
             toId = toId, text = "Hello!", timestamp = timestamp,
@@ -139,7 +139,7 @@ class MessageProtocolTest {
     }
 
     @Test
-    fun `messageToJson serialises FILE_OFFER message correctly`() {
+    fun `messageToJson serializes FILE_OFFER message correctly`() {
         val msg = Message(
             id = baseId, fromId = fromId, fromName = fromName,
             toId = toId, text = "", timestamp = timestamp,
@@ -156,7 +156,7 @@ class MessageProtocolTest {
     }
 
     @Test
-    fun `messageToJson serialises HELLO message correctly`() {
+    fun `messageToJson serializes HELLO message correctly`() {
         val msg = Message(
             id = baseId, fromId = fromId, fromName = fromName,
             toId = toId, text = "", timestamp = timestamp,
