@@ -52,6 +52,8 @@ actual suspend fun pickFile(): File? {
     val launcher = AppContextHolder.filePickerLauncher ?: return null
 
     val deferred = CompletableDeferred<Uri?>()
+    // If another pick is already in progress, cancel it before starting a new one.
+    AppContextHolder.pendingFileDeferred?.complete(null)
     AppContextHolder.pendingFileDeferred = deferred
 
     withContext(Dispatchers.Main) {
@@ -69,7 +71,8 @@ private fun copyUriToTempFile(context: Context, uri: Uri): File? {
         // (file.name is used as the display name by the file-transfer layer).
         val tempDir = File(context.cacheDir, "ncc_${System.currentTimeMillis()}").also { it.mkdirs() }
         val tempFile = File(tempDir, fileName)
-        context.contentResolver.openInputStream(uri)?.use { input ->
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        inputStream.use { input ->
             tempFile.outputStream().use { output ->
                 input.copyTo(output)
             }
