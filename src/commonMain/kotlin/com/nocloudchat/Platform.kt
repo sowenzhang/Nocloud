@@ -6,4 +6,4 @@ expect fun openFileInExplorer(path: String)
 expect fun getDownloadDirectory(): File
 expect fun detectSsidPlatform(): String?
 expect fun getPreferencesDirectory(): File
-expect fun pickFile(): File?
+expect suspend fun pickFile(): File?

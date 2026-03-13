@@ -15,7 +15,7 @@ actual fun detectSsidPlatform(): String? = detectSsid()
 actual fun getPreferencesDirectory(): File =
     File(System.getProperty("user.home"), ".nocloudchat")
 
-actual fun pickFile(): File? {
+actual suspend fun pickFile(): File? {
     var result: File? = null
     val dialog = java.awt.FileDialog(null as java.awt.Frame?, "Select File", java.awt.FileDialog.LOAD)
     dialog.isVisible = true
