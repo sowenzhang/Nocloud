@@ -4,6 +4,7 @@ import com.nocloudchat.Preferences
 import com.nocloudchat.getDownloadDirectory
 import com.nocloudchat.openFileInExplorer
 import com.nocloudchat.detectSsidPlatform
+import com.nocloudchat.sha256
 import com.nocloudchat.model.Message
 import com.nocloudchat.model.MessageType
 import com.nocloudchat.model.Peer
@@ -94,12 +95,6 @@ class AppState {
         val hash = sha256(passphrase)
         _networkSecretHash.value = hash
         scope.launch(Dispatchers.IO) { Preferences.networkSecretHash = hash }
-    }
-
-    private fun sha256(input: String): String {
-        val digest = java.security.MessageDigest.getInstance("SHA-256")
-        val hash = digest.digest(input.toByteArray(Charsets.UTF_8))
-        return hash.joinToString("") { "%02x".format(it) }
     }
 
     // ── Peers ─────────────────────────────────────────────────────────────────
