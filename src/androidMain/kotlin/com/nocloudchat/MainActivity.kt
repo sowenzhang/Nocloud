@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import com.nocloudchat.state.AppState
 
 class MainActivity : ComponentActivity() {
@@ -20,6 +21,14 @@ class MainActivity : ComponentActivity() {
     // foreground, keeping discovery broadcasts and TCP messaging stable.
     private var wifiLock: WifiManager.WifiLock? = null
 
+    // File picker launcher — registered here so it is tied to the Activity lifecycle.
+    private val filePickerLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        AppContextHolder.pendingFileDeferred?.complete(uri)
+        AppContextHolder.pendingFileDeferred = null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Enable edge-to-edge so the app draws behind the status bar and
@@ -28,6 +37,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         // Context must be set before AppState, which reads Preferences on init.
         AppContextHolder.appContext = applicationContext
+        // Expose the launcher so pickFile() (called from platform code) can open the picker.
+        AppContextHolder.filePickerLauncher = { mimeType -> filePickerLauncher.launch(mimeType) }
         appState = AppState()
         setContent {
             App(appState)
@@ -52,6 +63,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+        AppContextHolder.filePickerLauncher = null
+        AppContextHolder.pendingFileDeferred?.complete(null)
+        AppContextHolder.pendingFileDeferred = null
         if (::appState.isInitialized) appState.shutdown()
     }
 }

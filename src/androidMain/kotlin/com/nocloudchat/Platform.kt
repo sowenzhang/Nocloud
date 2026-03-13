@@ -3,11 +3,16 @@ package com.nocloudchat
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
+import android.net.Uri
 import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.Environment
 import android.provider.DocumentsContract
+import android.provider.OpenableColumns
 import java.io.File
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 actual fun openFileInExplorer(path: String) {
     runCatching {
@@ -43,7 +48,48 @@ actual fun openFileInExplorer(path: String) {
     }
 }
 
-actual fun pickFile(): java.io.File? = null // TODO: launch Android file picker Intent
+actual suspend fun pickFile(): File? {
+    val launcher = AppContextHolder.filePickerLauncher ?: return null
+
+    val deferred = CompletableDeferred<Uri?>()
+    AppContextHolder.pendingFileDeferred = deferred
+
+    withContext(Dispatchers.Main) {
+        launcher("*/*")
+    }
+
+    val uri = deferred.await() ?: return null
+    return copyUriToTempFile(AppContextHolder.appContext, uri)
+}
+
+private fun copyUriToTempFile(context: Context, uri: Uri): File? {
+    return try {
+        val fileName = getFileNameFromUri(context, uri) ?: "attachment"
+        // Use a unique subdirectory per pick so the original filename is preserved
+        // (file.name is used as the display name by the file-transfer layer).
+        val tempDir = File(context.cacheDir, "ncc_${System.currentTimeMillis()}").also { it.mkdirs() }
+        val tempFile = File(tempDir, fileName)
+        context.contentResolver.openInputStream(uri)?.use { input ->
+            tempFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        tempFile
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun getFileNameFromUri(context: Context, uri: Uri): String? {
+    var name: String? = null
+    context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+        val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+        if (nameIndex != -1 && cursor.moveToFirst()) {
+            name = cursor.getString(nameIndex)
+        }
+    }
+    return name
+}
 
 actual fun getDownloadDirectory(): File =
     File("/storage/emulated/0/Download/NoCloud Chat")
