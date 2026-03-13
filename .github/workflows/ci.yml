@@ -45,4 +45,4 @@ jobs:
 
       - name: Run Tests
         shell: bash
-        run: ./gradlew test --no-daemon --continue
+        run: ./gradlew desktopTest --no-daemon --continue

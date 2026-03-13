@@ -24,11 +24,10 @@ class Discovery(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private data class PeerEntry(val peer: Peer, val lastSeen: Long)
-    private data class RateEntry(val count: Int, val windowStart: Long)
 
     // ConcurrentHashMap for thread-safe peer map access across coroutines
     private val peers   = ConcurrentHashMap<String, PeerEntry>()
-    private val rateMap = ConcurrentHashMap<String, RateEntry>()
+    private val rateLimiter = RateLimiter(maxCount = RATE_LIMIT_MAX, windowMs = RATE_LIMIT_WINDOW_MS)
     private var socket: DatagramSocket? = null
 
     fun start() {
@@ -56,26 +55,12 @@ class Discovery(
                 val ip   = packet.address?.hostAddress ?: continue
 
                 // Rate limiting per sender IP
-                if (isRateLimited(ip)) continue
+                if (rateLimiter.isLimited(ip)) continue
 
                 handleAnnounce(data, ip)
             } catch (e: Exception) {
                 if (!scope.isActive) break
             }
-        }
-    }
-
-    private fun isRateLimited(ip: String): Boolean {
-        val now = System.currentTimeMillis()
-        val entry = rateMap[ip]
-        return if (entry == null || now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
-            rateMap[ip] = RateEntry(1, now)
-            false
-        } else if (entry.count >= RATE_LIMIT_MAX) {
-            true  // rate-limited, drop packet
-        } else {
-            rateMap[ip] = entry.copy(count = entry.count + 1)
-            false
         }
     }
 
@@ -165,8 +150,7 @@ class Discovery(
     }
 
     private fun pruneRateMap() {
-        val cutoff = System.currentTimeMillis() - RATE_LIMIT_WINDOW_MS
-        rateMap.entries.removeIf { it.value.windowStart < cutoff }
+        rateLimiter.prune(System.currentTimeMillis() - RATE_LIMIT_WINDOW_MS)
     }
 
     private fun getBroadcastAddresses(): List<InetAddress> {

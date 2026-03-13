@@ -101,20 +101,20 @@ class FileTransfer(private val scope: CoroutineScope) {
             }
         }
     }
+}
 
-    /** Returns a File that doesn't already exist, appending (1), (2) etc. as needed. */
-    private fun uniqueFile(dir: File, filename: String): File {
-        val candidate = File(dir, filename)
-        if (!candidate.exists()) return candidate
+/** Returns a [File] that doesn't already exist, appending (1), (2) etc. as needed. */
+internal fun uniqueFile(dir: File, filename: String): File {
+    val candidate = File(dir, filename)
+    if (!candidate.exists()) return candidate
 
-        val dot = filename.lastIndexOf('.')
-        val base = if (dot >= 0) filename.substring(0, dot) else filename
-        val ext  = if (dot >= 0) filename.substring(dot) else ""
-        var n = 1
-        while (true) {
-            val f = File(dir, "$base ($n)$ext")
-            if (!f.exists()) return f
-            n++
-        }
+    val dot = filename.lastIndexOf('.')
+    val base = if (dot >= 0) filename.substring(0, dot) else filename
+    val ext  = if (dot >= 0) filename.substring(dot) else ""
+    var n = 1
+    while (true) {
+        val f = File(dir, "$base ($n)$ext")
+        if (!f.exists()) return f
+        n++
     }
 }
