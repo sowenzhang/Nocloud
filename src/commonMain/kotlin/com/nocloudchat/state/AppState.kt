@@ -4,6 +4,7 @@ import com.nocloudchat.Preferences
 import com.nocloudchat.getDownloadDirectory
 import com.nocloudchat.openFileInExplorer
 import com.nocloudchat.detectSsidPlatform
+import com.nocloudchat.sha256
 import com.nocloudchat.model.Message
 import com.nocloudchat.model.MessageType
 import com.nocloudchat.model.Peer
