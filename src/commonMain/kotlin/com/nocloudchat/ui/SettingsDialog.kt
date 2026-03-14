@@ -17,6 +17,7 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -29,10 +30,13 @@ fun SettingsDialog(state: AppState, onDismiss: () -> Unit, onOpenAbout: () -> Un
     val myName by state.myName.collectAsState()
     val isDark by state.isDarkMode.collectAsState()
     val secretEnabled by state.networkSecretEnabled.collectAsState()
+    val secretHash by state.networkSecretHash.collectAsState()
     var nameInput by remember(myName) { mutableStateOf(myName) }
     var passphraseInput by remember { mutableStateOf("") }
+    var showPassphrase by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val focusRequester = remember { FocusRequester() }
+    val hasExistingPassphrase = secretEnabled && secretHash != null
 
     fun save() {
         if (nameInput.isNotBlank()) {
@@ -175,18 +179,49 @@ fun SettingsDialog(state: AppState, onDismiss: () -> Unit, onOpenAbout: () -> Un
                 AnimatedVisibility(visible = secretEnabled) {
                     Column {
                         Spacer(Modifier.height(8.dp))
+                        // Indicator: passphrase already set
+                        if (hasExistingPassphrase && passphraseInput.isEmpty()) {
+                            Row(
+                                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(NoCloudChatColors.Accent.copy(alpha = 0.10f))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Text("🔒", fontSize = 14.sp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "Passphrase is set",
+                                    fontSize = 12.sp,
+                                    color = NoCloudChatColors.Accent,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f),
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
                         OutlinedTextField(
                             value = passphraseInput,
                             onValueChange = { passphraseInput = it },
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = {
                                 Text(
-                                    "Enter network passphrase",
+                                    if (hasExistingPassphrase) "Enter new passphrase to replace" else "Enter network passphrase",
                                     color = NoCloudChatColors.TextMuted,
                                     fontSize = 14.sp,
                                 )
                             },
-                            visualTransformation = PasswordVisualTransformation(),
+                            visualTransformation = if (showPassphrase) VisualTransformation.None else PasswordVisualTransformation(),
+                            trailingIcon = {
+                                IconButton(onClick = { showPassphrase = !showPassphrase }) {
+                                    Text(
+                                        if (showPassphrase) "🙈" else "👁️",
+                                        fontSize = 16.sp,
+                                        color = NoCloudChatColors.TextMuted,
+                                    )
+                                }
+                            },
                             singleLine = true,
                             shape = RoundedCornerShape(10.dp),
                             colors = OutlinedTextFieldDefaults.colors(

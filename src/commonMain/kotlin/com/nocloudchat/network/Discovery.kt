@@ -20,6 +20,7 @@ class Discovery(
     private val onPeersChanged: (List<Peer>) -> Unit,
     private val getSecretHash: () -> String? = { null },
     private val onSecretRequired: (String) -> Unit = {},
+    private val onProtectedPeersChanged: (List<Peer>) -> Unit = {},
 ) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -27,6 +28,7 @@ class Discovery(
 
     // ConcurrentHashMap for thread-safe peer map access across coroutines
     private val peers   = ConcurrentHashMap<String, PeerEntry>()
+    private val protectedPeers = ConcurrentHashMap<String, PeerEntry>()
     private val rateLimiter = RateLimiter(maxCount = RATE_LIMIT_MAX, windowMs = RATE_LIMIT_WINDOW_MS)
     private var socket: DatagramSocket? = null
 
@@ -112,12 +114,21 @@ class Discovery(
         val mySecret = getSecretHash()
         when {
             mySecret != null && peerSecret == null -> return           // we require secret, peer has none
-            mySecret != null && peerSecret != mySecret -> return       // secret mismatch
+            mySecret != null && peerSecret != mySecret -> {
+                addToProtected(id, senderIP, port)                     // show with lock icon
+                return
+            }
             mySecret == null && peerSecret != null -> {
                 onSecretRequired(peerSecret)                           // prompt user
+                addToProtected(id, senderIP, port)                     // show with lock icon
                 return
             }
             // both null or both match → fall through to normal peer handling
+        }
+
+        // Peer now passes — remove from protected if it was there
+        if (protectedPeers.remove(id) != null) {
+            onProtectedPeersChanged(protectedPeers.values.map { it.peer })
         }
 
         // Cap peer table size
@@ -146,6 +157,29 @@ class Discovery(
         if (stale.isNotEmpty()) {
             stale.forEach { peers.remove(it) }
             onPeersChanged(getPeerList())
+        }
+        val staleProtected = protectedPeers.entries.filter { it.value.lastSeen < cutoff }.map { it.key }
+        if (staleProtected.isNotEmpty()) {
+            staleProtected.forEach { protectedPeers.remove(it) }
+            onProtectedPeersChanged(protectedPeers.values.map { it.peer })
+        }
+    }
+
+    private fun addToProtected(id: String, ip: String, port: Int) {
+        val now = System.currentTimeMillis()
+        val existing = protectedPeers[id]
+        val peer = Peer(
+            id          = id,
+            name        = "",
+            ip          = ip,
+            port        = port,
+            onlineSince = existing?.peer?.onlineSince ?: now,
+            hasPassphrase = true,
+        )
+        protectedPeers[id] = PeerEntry(peer, now)
+        // Only notify when a new protected peer is first seen
+        if (existing == null) {
+            onProtectedPeersChanged(protectedPeers.values.map { it.peer })
         }
     }
 
