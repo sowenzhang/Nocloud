@@ -177,8 +177,9 @@ class Discovery(
             hasPassphrase = true,
         )
         protectedPeers[id] = PeerEntry(peer, now)
-        // Only notify when a new protected peer is first seen
-        if (existing == null) {
+        // Notify when the peer list changes (new peer or IP/port update); lastSeen
+        // is internal to Discovery for pruning and is not surfaced to the UI.
+        if (existing == null || existing.peer.ip != ip || existing.peer.port != port) {
             onProtectedPeersChanged(protectedPeers.values.map { it.peer })
         }
     }

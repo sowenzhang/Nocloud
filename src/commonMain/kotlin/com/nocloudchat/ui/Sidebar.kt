@@ -194,6 +194,7 @@ private fun PeerItem(
     ) {
         // Avatar with status indicator overlay
         Box {
+            // Pass empty name for protected peers so Avatar shows "?" initials
             Avatar(name = if (hasPassphrase) "" else peerName, id = peerId)
             if (hasPassphrase) {
                 Box(
@@ -233,8 +234,7 @@ private fun PeerItem(
             )
             Text(
                 text = when {
-                    hasPassphrase && peerIp != null -> "Passphrase required · $peerIp"
-                    hasPassphrase -> "Passphrase required · tap to connect"
+                    hasPassphrase -> "Passphrase required · ${peerIp ?: "tap to connect"}"
                     else -> "Online since ${formatSidebarTime(onlineSince)}"
                 },
                 fontSize = 11.sp,
