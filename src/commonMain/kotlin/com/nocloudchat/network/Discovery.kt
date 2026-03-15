@@ -177,6 +177,11 @@ class Discovery(
             hasPassphrase = true,
         )
         protectedPeers[id] = PeerEntry(peer, now)
+        // If this peer was previously in the regular peer map, evict it immediately
+        // so it doesn't appear as both normal and protected during the prune window.
+        if (peers.remove(id) != null) {
+            onPeersChanged(getPeerList())
+        }
         // Notify when the peer list changes (new peer or IP/port update); lastSeen
         // is internal to Discovery for pruning and is not surfaced to the UI.
         if (existing == null || existing.peer.ip != ip || existing.peer.port != port) {
