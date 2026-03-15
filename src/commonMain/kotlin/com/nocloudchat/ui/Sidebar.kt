@@ -37,6 +37,7 @@ fun Sidebar(
 ) {
     val myName by state.myName.collectAsState()
     val peers by state.peers.collectAsState()
+    val protectedPeers by state.protectedPeers.collectAsState()
     val activePeerId by state.activePeerId.collectAsState()
     val unread by state.unreadCounts.collectAsState()
     val isPrivateNetwork by state.isPrivateNetwork.collectAsState()
@@ -66,7 +67,7 @@ fun Sidebar(
                 letterSpacing = 0.8.sp,
                 color = NoCloudChatColors.TextMuted,
             )
-            if (peers.isNotEmpty()) {
+            if (peers.isNotEmpty() || protectedPeers.isNotEmpty()) {
                 Box(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
@@ -75,7 +76,7 @@ fun Sidebar(
                         .padding(horizontal = 6.dp, vertical = 1.dp)
                 ) {
                     Text(
-                        text = peers.size.toString(),
+                        text = (peers.size + protectedPeers.size).toString(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -85,7 +86,7 @@ fun Sidebar(
         }
 
         // ── Peer list ─────────────────────────────────────────────────────────
-        if (peers.isEmpty()) {
+        if (peers.isEmpty() && protectedPeers.isEmpty()) {
             NoPeersState(modifier = Modifier.weight(1f))
         } else {
             LazyColumn(modifier = Modifier.weight(1f).padding(horizontal = 8.dp)) {
@@ -97,6 +98,18 @@ fun Sidebar(
                         isActive = peer.id == activePeerId,
                         unreadCount = unread[peer.id] ?: 0,
                         onClick = { state.openChat(peer.id) },
+                    )
+                }
+                items(protectedPeers, key = { "protected_${it.id}" }) { peer ->
+                    PeerItem(
+                        peerName = peer.name,
+                        peerId = peer.id,
+                        onlineSince = peer.onlineSince,
+                        isActive = false,
+                        unreadCount = 0,
+                        hasPassphrase = true,
+                        peerIp = peer.ip,
+                        onClick = { state.requestJoinProtectedPeer() },
                     )
                 }
                 item { Spacer(Modifier.height(8.dp)) }
@@ -154,6 +167,8 @@ private fun PeerItem(
     onlineSince: Long,
     isActive: Boolean,
     unreadCount: Int,
+    hasPassphrase: Boolean = false,
+    peerIp: String? = null,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -177,34 +192,51 @@ private fun PeerItem(
             .clickable { onClick() }
             .padding(10.dp),
     ) {
-        // Avatar with online dot overlay
+        // Avatar with status indicator overlay
         Box {
-            Avatar(name = peerName, id = peerId)
-            Box(
-                modifier = Modifier
-                    .size(11.dp)
-                    .clip(CircleShape)
-                    .background(NoCloudChatColors.Surface)
-                    .padding(2.dp)
-                    .clip(CircleShape)
-                    .background(NoCloudChatColors.OnlineGreen)
-                    .align(Alignment.BottomEnd)
-            )
+            // Pass empty name for protected peers so Avatar shows "?" initials
+            Avatar(name = if (hasPassphrase) "" else peerName, id = peerId)
+            if (hasPassphrase) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(NoCloudChatColors.Surface)
+                        .align(Alignment.BottomEnd)
+                ) {
+                    Text("🔒", fontSize = 9.sp)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(11.dp)
+                        .clip(CircleShape)
+                        .background(NoCloudChatColors.Surface)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(NoCloudChatColors.OnlineGreen)
+                        .align(Alignment.BottomEnd)
+                )
+            }
         }
 
         Spacer(Modifier.width(10.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = peerName,
+                text = if (hasPassphrase) "Protected peer" else peerName,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp,
-                color = NoCloudChatColors.TextPrimary,
+                color = if (hasPassphrase) NoCloudChatColors.TextMuted else NoCloudChatColors.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = "Online since ${formatSidebarTime(onlineSince)}",
+                text = when {
+                    hasPassphrase -> "Passphrase required · ${peerIp ?: "tap to connect"}"
+                    else -> "Online since ${formatSidebarTime(onlineSince)}"
+                },
                 fontSize = 11.sp,
                 color = NoCloudChatColors.TextMuted,
                 maxLines = 1,

@@ -6,4 +6,5 @@ data class Peer(
     val ip: String,
     val port: Int,
     val onlineSince: Long = System.currentTimeMillis(),
+    val hasPassphrase: Boolean = false,
 )

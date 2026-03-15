@@ -97,6 +97,14 @@ class AppState {
         scope.launch(Dispatchers.IO) { Preferences.networkSecretHash = hash }
     }
 
+    // ── Protected peers (passphrase mismatch) ──────────────────────────────────
+    private val _protectedPeers = MutableStateFlow<List<Peer>>(emptyList())
+    val protectedPeers: StateFlow<List<Peer>> = _protectedPeers.asStateFlow()
+
+    fun requestJoinProtectedPeer() {
+        scope.launch { _secretJoinRequest.emit("") }
+    }
+
     // ── Peers ─────────────────────────────────────────────────────────────────
     private val _peers = MutableStateFlow<List<Peer>>(emptyList())
     val peers: StateFlow<List<Peer>> = _peers.asStateFlow()
@@ -161,11 +169,12 @@ class AppState {
         val port = messenger!!.start()
 
         discovery = Discovery(
-            peerId           = myId,
-            messagingPort    = port,
-            onPeersChanged   = { updated -> handlePeersChanged(updated) },
-            getSecretHash    = { if (_networkSecretEnabled.value) _networkSecretHash.value else null },
-            onSecretRequired = { hash -> scope.launch { _secretJoinRequest.emit(hash) } },
+            peerId                  = myId,
+            messagingPort           = port,
+            onPeersChanged          = { updated -> handlePeersChanged(updated) },
+            getSecretHash           = { if (_networkSecretEnabled.value) _networkSecretHash.value else null },
+            onSecretRequired        = { hash -> scope.launch { _secretJoinRequest.emit(hash) } },
+            onProtectedPeersChanged = { updated -> _protectedPeers.value = updated },
         )
         discovery!!.start()
     }
